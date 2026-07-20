@@ -1,21 +1,67 @@
-# ROS 2 Lyrical EtherCAT bridge snap
+# EtherCAT ROS 2 bridge snap
 
-Prototype packaging for ROBENG-1886.
+A strict Ubuntu 26.04 snap that packages IgH EtherCAT userspace, the ICube ROS
+2 EtherCAT driver, and a ready-to-run EasyCAT demonstration for ROS 2 Lyrical.
 
-For the complete install, hardware, terminal, ROS topic, visualization, and
-recording procedure, see [DEMO-STEPS.md](DEMO-STEPS.md) or
-[DEMO-STEPS.html](DEMO-STEPS.html).
+Connect an EasyCAT board, install the snap, and run one command to:
 
-The snap bundles:
+- start the EtherCAT ROS 2 Control hardware interface;
+- read both EasyCAT analog inputs;
+- publish them as standard ROS 2 joint positions on `/joint_states`; and
+- display A0 and A1 in a clean live terminal dashboard.
 
-- ICube `ethercat_driver_ros2` from the pinned `jazzy` branch revision.
-- IgH EtherCAT 1.6.9 userspace (`ecrt.h`, `libethercat`, and the `ethercat`
-  CLI) from the pinned `stable-1.6` revision.
-- ROS 2 control runtime dependencies not provided by the
-  `ros-lyrical-ros-base` content snap.
+```text
+EasyCAT board
+  └─ 32-byte TxPDO / 32-byte RxPDO
+    └─ host IgH kernel master and /dev/EtherCAT0
+      └─ strict ethercat-ros2-bridge snap
+        ├─ ROS 2 Control + GenericEcSlave
+        ├─ /joint_states
+        └─ live A0/A1 terminal dashboard
+```
 
-The host provides the `ec_master` kernel module and `/dev/EtherCAT*`. No kernel
-module or NIC driver is built into the snap.
+## Quick links
+
+- [Step-by-step demo runbook](DEMO-STEPS.md)
+- [Printable HTML demo runbook](DEMO-STEPS.html)
+- [Engineering record](ENGINEERING-RECORD.md)
+- [Project summary](summary.md)
+- [HTML project summary](summary.html)
+
+## Project status
+
+Completed:
+
+- reproducible `core26` snap build;
+- pinned IgH 1.6.9 userspace library and CLI, without kernel modules;
+- pinned ICube EtherCAT ROS 2 driver built for ROS 2 Lyrical;
+- complete EasyCAT 32-byte input and output process images;
+- strict `/dev/EtherCAT*` access through `custom-device`;
+- A0/A1 conversion to `sensor_msgs/msg/JointState`;
+- one-command terminal dashboard;
+- strict installation and runtime checks on a clean Ubuntu 26.04 VM; and
+- synthetic end-to-end ROS validation with A0=42 and A1=211.
+
+Remaining physical validation:
+
+- install the final artifact on the EtherCAT host;
+- confirm the confined CLI sees the EasyCAT slave; and
+- rotate both potentiometers while checking the dashboard and ROS plots.
+
+## Packaged components
+
+| Component | Version/source | Purpose |
+|---|---|---|
+| Snap base | `core26` | Ubuntu 26.04 runtime |
+| ROS 2 | Lyrical Luth | ROS runtime and DDS communication |
+| IgH EtherCAT | 1.6.9, commit `beb2bf07df4a19024490c0517137cffa8f97ace0` | Userspace API, `libethercat`, and CLI |
+| ICube EtherCAT driver | commit `7a32bd7b8fc066c6668b1df7446c89aff570bb7d` | ROS 2 Control integration |
+| GenericEcSlave | ICube plugin | YAML-driven EasyCAT PDO mapping |
+| EasyCAT adapter | This repository | Converts A0/A1 to `/joint_states` |
+| Terminal monitor | This repository | Starts the stack and displays live values |
+
+The host provides the `ec_master` kernel module, NIC driver, and
+`/dev/EtherCAT*`. No kernel module or NIC driver is built into the snap.
 
 ## Demo result
 
@@ -23,30 +69,97 @@ The snap provides a one-command EasyCAT demo. It starts the EtherCAT ROS 2
 Control bridge, maps the two analog inputs to ROS joint positions, publishes
 `/joint_states`, and displays a live terminal dashboard:
 
-  snap run ethercat-ros2-bridge.demo
+```bash
+snap run ethercat-ros2-bridge.demo
+```
 
 The dashboard shows `A0` and `A1` as values from 0 to 255 with live bar graphs.
 Its status changes to `LIVE` after complete data begins arriving. Bridge logs
 are kept out of the presentation terminal and written to:
 
-  ~/snap/ethercat-ros2-bridge/current/easycat-demo.log
+```text
+~/snap/ethercat-ros2-bridge/current/easycat-demo.log
+```
+
+## Supported EasyCAT process image
+
+| Property | Value |
+|---|---|
+| Vendor ID | `0x0000079a` |
+| Product ID | `0x00defede` |
+| RxPDO | `0x1600`, object `0x0005`, 32 bytes |
+| TxPDO | `0x1a00`, object `0x0006`, 32 bytes |
+| SM0 | output / RxPDO, watchdog enabled |
+| SM1 | input / TxPDO, watchdog disabled |
+| Mailbox protocols | none |
+
+All 64 process-data entries are declared to preserve the exact slave layout.
+TxPDO bytes 0 and 1 are exposed as `analog_input_0` and `analog_input_1`.
+
+## Prerequisites
+
+For building:
+
+- Snapcraft 9;
+- LXD; and
+- access to the ROS package archive and pinned source repositories.
+
+For running:
+
+- Ubuntu 26.04;
+- the host IgH EtherCAT master and NIC driver;
+- the `ros-lyrical-ros-base` content snap; and
+- an EasyCAT board using the process image above.
 
 ## Build
 
 The Lyrical extension is experimental in Snapcraft 9 and must be explicitly
 enabled:
 
-    SNAPCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS=1 snapcraft pack --use-lxd
+```bash
+git clone https://github.com/florcabral/ethercat-ros2-bridge-snap.git
+cd ethercat-ros2-bridge-snap
+SNAPCRAFT_ENABLE_EXPERIMENTAL_EXTENSIONS=1 snapcraft pack --use-lxd
+```
+
+Expected amd64 artifact:
+
+```text
+ethercat-ros2-bridge_0.1_amd64.snap
+```
+
+The validated artifact is approximately 184 MB.
 
 ## Install and connect the EtherCAT device
 
-    sudo snap install --dangerous ./ethercat-ros2-bridge_0.1_amd64.snap
-    sudo snap connect \
-      ethercat-ros2-bridge:ros-lyrical-ros-base \
-      ros-lyrical-ros-base:ros-lyrical-ros-base
-    sudo snap connect \
-      ethercat-ros2-bridge:ethercat-master \
-      ethercat-ros2-bridge:ethercat-master-slot
+Install the Lyrical content provider if it is not already present:
+
+```bash
+sudo snap install ros-lyrical-ros-base --edge
+```
+
+Install the locally built artifact and connect its interfaces:
+
+```bash
+sudo snap install --dangerous ./ethercat-ros2-bridge_0.1_amd64.snap
+
+sudo snap connect \
+  ethercat-ros2-bridge:ros-lyrical-ros-base \
+  ros-lyrical-ros-base:ros-lyrical-ros-base
+
+sudo snap connect \
+  ethercat-ros2-bridge:ethercat-master \
+  ethercat-ros2-bridge:ethercat-master-slot
+```
+
+`--dangerous` is required for an unsigned local artifact. It does not change
+the snap's strict confinement.
+
+Verify all connections:
+
+```bash
+snap connections ethercat-ros2-bridge
+```
 
 The self-provided `custom-device` slot makes local strict-confinement testing
 possible. Store publication and auto-connection require review because
@@ -59,23 +172,28 @@ The host must already have the IgH master and NIC driver loaded, expose
 
 Connect and power the EasyCAT device, then run:
 
-  snap run ethercat-ros2-bridge.demo
+```bash
+snap run ethercat-ros2-bridge.demo
+```
 
-Rotate both potentiometers. `A0` and `A1` should change independently. Stop the
-demo with Ctrl-C.
+Wait for the dashboard status to change from `WAITING FOR EASYCAT DATA` to
+`LIVE`. Rotate both potentiometers; `A0` and `A1` should change independently
+from 0 to 255. Stop the demo with Ctrl-C.
 
 ## ROS 2 topic and visualization
 
 The demo publishes `sensor_msgs/msg/JointState` on `/joint_states` with a fixed
 order:
 
-1. `easycat_analog_0`
-2. `easycat_analog_1`
+1. `easycat_analog_0` → `position[0]`
+2. `easycat_analog_1` → `position[1]`
 
 In another terminal, inspect the data or publication rate with:
 
-  snap run ethercat-ros2-bridge.ros2 topic echo /joint_states
-  snap run ethercat-ros2-bridge.ros2 topic hz /joint_states
+```bash
+snap run ethercat-ros2-bridge.ros2 topic echo /joint_states
+snap run ethercat-ros2-bridge.ros2 topic hz /joint_states
+```
 
 For the recorded visualization demo:
 
@@ -90,19 +208,105 @@ For the recorded visualization demo:
 Both applications use normal ROS 2 DDS networking, so no bridge process is
 required between the snap and a host PlotJuggler installation.
 
-## Diagnostic commands
+## Troubleshooting
+
+### Verify packaged CLI and slave discovery
 
 With the host master running and exposing `/dev/EtherCAT0`:
 
-    ethercat-ros2-bridge.ethercat version
-    ethercat-ros2-bridge.ethercat slaves
-    ethercat-ros2-bridge.ros2 pkg prefix ethercat_driver
-    ethercat-ros2-bridge.ros2 pkg prefix ethercat_generic_slave
+```bash
+snap run ethercat-ros2-bridge.ethercat version
+snap run ethercat-ros2-bridge.ethercat slaves
+snap run ethercat-ros2-bridge.ros2 pkg prefix ethercat_driver
+snap run ethercat-ros2-bridge.ros2 pkg prefix ethercat_generic_slave
+```
 
 The expected slave identity is `Generic 32+32 bytes rev 1`.
+
+### Dashboard reports `BRIDGE STOPPED` or `NO DATA`
 
 If the dashboard reports `BRIDGE STOPPED` or `NO DATA`, inspect the demo log
 above and check:
 
-  snap connections ethercat-ros2-bridge
-  ethercat-ros2-bridge.ethercat slaves
+```bash
+snap connections ethercat-ros2-bridge
+snap run ethercat-ros2-bridge.ethercat slaves
+tail -n 200 ~/snap/ethercat-ros2-bridge/current/easycat-demo.log
+```
+
+## Available snap applications
+
+| Application | Command | Purpose |
+|---|---|---|
+| Demo | `snap run ethercat-ros2-bridge.demo` | Start the bridge and live dashboard |
+| Bridge | `snap run ethercat-ros2-bridge.bridge` | Start the ROS stack without the dashboard |
+| EtherCAT CLI | `snap run ethercat-ros2-bridge.ethercat` | Inspect the host master and slaves |
+| ROS CLI | `snap run ethercat-ros2-bridge.ros2` | Inspect ROS nodes, topics, and packages |
+| SDO server | `snap run ethercat-ros2-bridge.sdo-server` | Start the packaged ICube SDO service executable |
+
+The tested EasyCAT firmware has no mailbox protocol, so SDO upload/download is
+not part of this demonstration even though the generic server executable is
+packaged.
+
+## Repository layout
+
+```text
+.
+├── snap/
+│   ├── snapcraft.yaml
+│   └── local/
+│       ├── ament_target_dependencies.cmake
+│       ├── lyrical-ament-target-dependencies.patch
+│       └── easycat_bridge/
+│           ├── config/          # PDO and controller configuration
+│           ├── easycat_bridge/  # dashboard and topic adapter
+│           └── launch/          # ROS 2 Control launch
+├── DEMO-STEPS.md                # complete presentation runbook
+├── ENGINEERING-RECORD.md        # implementation decisions and evidence
+└── summary.md                   # concise project summary
+```
+
+## Validation evidence
+
+The current revision has been validated as follows:
+
+- Snapcraft produced the amd64 artifact successfully.
+- The strict snap installed in a clean Ubuntu 26.04 LXD VM.
+- The ROS content and custom EtherCAT interfaces connected successfully.
+- The bundled CLI reported IgH 1.6.9.
+- ROS discovered `easycat_bridge`, `ethercat_driver`, and
+  `joint_state_broadcaster`.
+- The packaged launch description parsed successfully.
+- The complete EasyCAT PDO configuration loaded into the ICube driver.
+- A synthetic dynamic-state input containing A0=42 and A1=211 produced:
+
+```yaml
+name:
+  - easycat_analog_0
+  - easycat_analog_1
+position:
+  - 42.0
+  - 211.0
+```
+
+The clean VM has no physical `/dev/EtherCAT0`; final real-device testing is
+therefore listed as remaining work instead of being reported as complete.
+
+## Known limitations
+
+- The EasyCAT-specific mapping assumes the exact 32+32-byte process image
+  documented above.
+- This is a userspace snap; it cannot configure, load, or replace host kernel
+  modules.
+- `custom-device` requires Snap Store review for publication or automatic
+  connection.
+- The ROS 2 Lyrical Snapcraft extension and content snap currently use the
+  experimental/edge delivery path.
+- The tested EasyCAT firmware exposes PDO data but no CoE mailbox or SDO object
+  dictionary.
+
+## Licensing
+
+The local EasyCAT ROS package declares Apache-2.0. The snap also packages IgH
+EtherCAT GPL-2.0+ components. See the source projects and package metadata for
+their applicable license terms.
