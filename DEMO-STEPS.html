@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EasyCAT Demo Runbook</title>
+  <style>
+    :root { color-scheme:light dark; --accent:#5b5bd6; --ok:#14845b; --warn:#c77800; --panel:#f4f5f8; --text:#202124; --muted:#62666d; --line:#d9dce2; }
+    @media (prefers-color-scheme:dark) { :root { --panel:#20232a; --text:#f3f4f6; --muted:#b7bbc3; --line:#3b3f49; } }
+    * { box-sizing:border-box; }
+    body { margin:0; font:16px/1.62 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--text); background:Canvas; }
+    main { width:min(1000px,calc(100% - 32px)); margin:36px auto 80px; }
+    header { padding:30px; border-radius:18px; color:white; background:linear-gradient(135deg,#3737a4,#6857df 58%,#14845b); box-shadow:0 16px 42px #0002; }
+    h1 { margin:0 0 8px; font-size:clamp(2rem,5vw,3rem); line-height:1.1; }
+    header p { margin:0; max-width:760px; font-size:1.08rem; opacity:.94; }
+    nav { margin:22px 0; padding:16px 20px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+    nav a { display:inline-block; margin:.25rem .85rem .25rem 0; color:var(--accent); }
+    section { scroll-margin-top:16px; }
+    h2 { margin-top:42px; padding-bottom:8px; border-bottom:2px solid var(--line); }
+    h3 { margin-top:28px; }
+    code { padding:.12rem .35rem; border-radius:5px; background:var(--panel); }
+    pre { overflow:auto; padding:14px 18px; border:1px solid var(--line); border-left:4px solid var(--accent); border-radius:10px; background:var(--panel); }
+    pre code { padding:0; background:transparent; }
+    li { margin:.4rem 0; }
+    .note,.warning,.success { margin:18px 0; padding:16px 18px; border:1px solid var(--line); border-left:5px solid var(--accent); border-radius:10px; background:var(--panel); }
+    .warning { border-left-color:var(--warn); }
+    .success { border-left-color:var(--ok); }
+    .steps { counter-reset:step; }
+    .steps > section > h2::before { counter-increment:step; content:counter(step) ". "; color:var(--accent); }
+    .checklist { columns:2; list-style:none; padding:0; }
+    .checklist li::before { content:"☐ "; color:var(--ok); font-weight:bold; }
+    footer { margin-top:50px; color:var(--muted); }
+    @media (max-width:700px) { .checklist { columns:1; } }
+    @media print { body { color:#111; background:#fff; } main { width:auto; margin:0; } header { box-shadow:none; } nav { display:none; } section { break-inside:avoid; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>EasyCAT demo runbook</h1>
+    <p>Install the snap, display live A0/A1 values, publish ROS 2 joint states, and prepare the PlotJuggler or Foxglove recording.</p>
+  </header>
+
+  <nav aria-label="Runbook contents">
+    <strong>Jump to:</strong>
+    <a href="#hardware">Hardware</a><a href="#install">Install</a><a href="#interfaces">Interfaces</a><a href="#basic">Basic demo</a><a href="#ros">ROS topic</a><a href="#visualization">Visualization</a><a href="#troubleshooting">Troubleshooting</a>
+  </nav>
+
+  <div class="success"><strong>Expected result:</strong> one command displays A0/A1 from 0–255 while publishing <code>easycat_analog_0</code> and <code>easycat_analog_1</code> on <code>/joint_states</code>.</div>
+
+  <div class="steps">
+    <section id="hardware">
+      <h2>Prepare the hardware</h2>
+      <ol>
+        <li>Connect the EasyCAT EtherCAT port to the host's configured EtherCAT adapter.</li>
+        <li>Connect and power the Arduino/EasyCAT board.</li>
+        <li>Confirm both potentiometers are connected to the firmware's analog inputs.</li>
+        <li>Wait a few seconds for the board and network adapter to initialize.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Open the project directory</h2>
+      <pre><code>cd ~/Documents/26.10/ethercat/ros2-ethercat-snap
+ls -lh ethercat-ros2-bridge_0.1_amd64.snap</code></pre>
+      <p>The expected artifact is <code>ethercat-ros2-bridge_0.1_amd64.snap</code>.</p>
+    </section>
+
+    <section>
+      <h2>Verify the host EtherCAT master</h2>
+      <p>The host supplies the IgH kernel modules and must expose <code>/dev/EtherCAT0</code>. The validated EasyCAT receive timeout is 5000 µs.</p>
+      <pre><code>sudo ls -l /dev/EtherCAT0
+sudo ethercat slaves</code></pre>
+      <p>Expected slave description:</p>
+      <pre><code>Generic 32+32 bytes rev 1</code></pre>
+      <div class="warning">Do not continue if the slave is missing. Check board power, cable, selected adapter, IgH modules, and the 5000 µs timeout.</div>
+    </section>
+
+    <section id="install">
+      <h2>Install the ROS 2 content snap</h2>
+      <pre><code>snap list ros-lyrical-ros-base</code></pre>
+      <p>If it is not installed:</p>
+      <pre><code>sudo snap install ros-lyrical-ros-base --edge</code></pre>
+    </section>
+
+    <section>
+      <h2>Install the demo snap</h2>
+      <pre><code>sudo snap install --dangerous ./ethercat-ros2-bridge_0.1_amd64.snap</code></pre>
+      <p><code>--dangerous</code> is expected because this local artifact is not signed by the Snap Store.</p>
+    </section>
+
+    <section id="interfaces">
+      <h2>Connect the interfaces</h2>
+      <p>Connect the ROS content provider:</p>
+      <pre><code>sudo snap connect \
+  ethercat-ros2-bridge:ros-lyrical-ros-base \
+  ros-lyrical-ros-base:ros-lyrical-ros-base</code></pre>
+      <p>Connect access to the EtherCAT device:</p>
+      <pre><code>sudo snap connect \
+  ethercat-ros2-bridge:ethercat-master \
+  ethercat-ros2-bridge:ethercat-master-slot</code></pre>
+      <p>Verify all connections:</p>
+      <pre><code>snap connections ethercat-ros2-bridge</code></pre>
+      <p>The ROS content, EtherCAT, network, and network-bind plugs should all have connected slots.</p>
+    </section>
+
+    <section>
+      <h2>Verify the bundled EtherCAT CLI</h2>
+      <pre><code>snap run ethercat-ros2-bridge.ethercat version
+snap run ethercat-ros2-bridge.ethercat slaves</code></pre>
+      <p>Expect IgH 1.6.9 and <code>Generic 32+32 bytes rev 1</code>.</p>
+    </section>
+
+    <section id="basic">
+      <h2>Run the basic terminal demo</h2>
+      <pre><code>snap run ethercat-ros2-bridge.demo</code></pre>
+      <ol>
+        <li>Wait for the status to change from <code>WAITING FOR EASYCAT DATA</code> to <code>LIVE</code>.</li>
+        <li>Rotate potentiometer 1 and confirm A0 changes.</li>
+        <li>Rotate potentiometer 2 and confirm A1 changes independently.</li>
+        <li>Stop the demo with Ctrl-C.</li>
+      </ol>
+    </section>
+
+    <section id="ros">
+      <h2>Verify the ROS 2 topic</h2>
+      <p>Leave the demo running and open a second terminal:</p>
+      <pre><code>snap run ethercat-ros2-bridge.ros2 topic echo /joint_states</code></pre>
+      <p>Expected shape:</p>
+      <pre><code>name:
+- easycat_analog_0
+- easycat_analog_1
+position:
+- &lt;A0 value&gt;
+- &lt;A1 value&gt;</code></pre>
+      <p>Optionally inspect the rate:</p>
+      <pre><code>snap run ethercat-ros2-bridge.ros2 topic hz /joint_states</code></pre>
+      <p>The fixed mapping is <code>position[0]</code> = A0 and <code>position[1]</code> = A1.</p>
+    </section>
+
+    <section id="visualization">
+      <h2>Run PlotJuggler or Foxglove</h2>
+      <ol>
+        <li>Keep the terminal demo running.</li>
+        <li>Start PlotJuggler or Foxglove on ROS 2 domain 0.</li>
+        <li>Select <code>/joint_states</code>.</li>
+        <li>Plot <code>/joint_states/position[0]</code> and label it A0.</li>
+        <li>Plot <code>/joint_states/position[1]</code> and label it A1.</li>
+        <li>Rotate both potentiometers and confirm both curves respond.</li>
+      </ol>
+      <div class="note">The snap uses Fast DDS over UDPv4, so the host visualization tool can discover the topic without another bridge process.</div>
+    </section>
+
+    <section>
+      <h2>Record the final video</h2>
+      <p>Arrange the terminal dashboard, PlotJuggler or Foxglove, and a webcam view of the EasyCAT board on one screen. Start recording, rotate each potentiometer separately, then rotate both. Keep the physical movement, terminal values, and plotted curves visible together.</p>
+    </section>
+  </div>
+
+  <section id="troubleshooting">
+    <h2>Troubleshooting</h2>
+    <h3>Waiting for data</h3>
+    <p>Allow up to 15 seconds. Then inspect:</p>
+    <pre><code>cat ~/snap/ethercat-ros2-bridge/current/easycat-demo.log</code></pre>
+
+    <h3><code>NO DATA - CHECK DEVICE/LOG</code></h3>
+    <pre><code>snap run ethercat-ros2-bridge.ethercat slaves
+tail -n 100 ~/snap/ethercat-ros2-bridge/current/easycat-demo.log</code></pre>
+
+    <h3><code>BRIDGE STOPPED - CHECK LOG</code></h3>
+    <pre><code>tail -n 200 ~/snap/ethercat-ros2-bridge/current/easycat-demo.log
+snap connections ethercat-ros2-bridge
+sudo ls -l /dev/EtherCAT0
+sudo ethercat slaves</code></pre>
+
+    <h3>PlotJuggler cannot see the topic</h3>
+    <ol>
+      <li>Confirm the dashboard says <code>LIVE</code>.</li>
+      <li>Run <code>snap run ethercat-ros2-bridge.ros2 topic list</code>.</li>
+      <li>Use ROS domain 0 and remove any conflicting <code>ROS_DOMAIN_ID</code>.</li>
+      <li>Restart PlotJuggler after starting the demo.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Fast rehearsal checklist</h2>
+    <ul class="checklist">
+      <li>Board powered and cable connected</li>
+      <li>Host CLI sees the EasyCAT slave</li>
+      <li>Final snap installed</li>
+      <li>Required interfaces connected</li>
+      <li>Packaged CLI sees the slave</li>
+      <li>Dashboard reaches LIVE</li>
+      <li>A0 follows potentiometer 1</li>
+      <li>A1 follows potentiometer 2</li>
+      <li>/joint_states contains both values</li>
+      <li>Visualization shows both curves</li>
+      <li>Webcam and recording tested</li>
+    </ul>
+  </section>
+
+  <footer>EasyCAT presentation runbook — July 20, 2026</footer>
+</main>
+</body>
+</html>

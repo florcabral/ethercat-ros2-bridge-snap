@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ROBENG-1886 Summary</title>
+  <style>
+    :root { color-scheme: light dark; --accent:#5b5bd6; --ok:#16865b; --panel:#f4f5f8; --text:#202124; --muted:#62666d; --line:#d9dce2; }
+    @media (prefers-color-scheme: dark) { :root { --panel:#20232a; --text:#f3f4f6; --muted:#b7bbc3; --line:#3b3f49; } }
+    * { box-sizing:border-box; }
+    body { margin:0; font:16px/1.65 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; color:var(--text); background:Canvas; }
+    main { width:min(980px,calc(100% - 32px)); margin:42px auto 80px; }
+    header { padding:32px; border-radius:18px; color:white; background:linear-gradient(135deg,#3939a8,#6d5ee7 60%,#16865b); box-shadow:0 18px 45px #0002; }
+    h1 { margin:0 0 8px; font-size:clamp(2rem,5vw,3.2rem); line-height:1.1; }
+    header p { max-width:720px; margin:0; font-size:1.1rem; opacity:.92; }
+    h2 { margin-top:42px; padding-bottom:8px; border-bottom:2px solid var(--line); }
+    h3 { margin-top:28px; }
+    code { padding:.12rem .35rem; border-radius:5px; background:var(--panel); }
+    pre { overflow:auto; padding:16px 18px; border:1px solid var(--line); border-radius:10px; background:var(--panel); }
+    pre code { padding:0; background:transparent; }
+    .facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin:24px 0; }
+    .fact, .callout { padding:18px; border:1px solid var(--line); border-radius:12px; background:var(--panel); }
+    .fact strong { display:block; color:var(--accent); font-size:1.2rem; }
+    .callout { border-left:5px solid var(--ok); }
+    table { width:100%; border-collapse:collapse; }
+    th,td { padding:10px 12px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+    th { background:var(--panel); }
+    li { margin:.35rem 0; }
+    footer { margin-top:52px; color:var(--muted); font-size:.92rem; }
+    @media print { body { color:#111; background:#fff; } main { width:auto; margin:0; } header { box-shadow:none; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>ROBENG-1886</h1>
+    <p>Ubuntu 26.04 EtherCAT userspace and ROS 2 bridge packaging for the EasyCAT demonstration.</p>
+  </header>
+
+  <div class="callout"><strong>Running the demo:</strong> use the standalone <a href="DEMO-STEPS.html">HTML runbook</a> or <a href="DEMO-STEPS.md">Markdown runbook</a>.</div>
+
+  <section class="facts">
+    <div class="fact"><strong>Ubuntu 26.04</strong>Strict core26 snap</div>
+    <div class="fact"><strong>184 MB</strong>Installable amd64 artifact</div>
+    <div class="fact"><strong>IgH 1.6.9</strong>Pinned userspace</div>
+    <div class="fact"><strong>ROS 2 Lyrical</strong>Standard /joint_states output</div>
+  </section>
+
+  <h2>What we achieved</h2>
+  <p>We produced an installable Ubuntu 26.04 snap that packages the EtherCAT userspace and ROS 2 bridge needed for the EasyCAT demo. The snap uses the IgH kernel modules supplied by the host and accesses the host-created <code>/dev/EtherCAT*</code> device instead of attempting to ship kernel modules.</p>
+  <p>The final artifact is <code>ethercat-ros2-bridge_0.1_amd64.snap</code>. It was built on July 20, 2026 with strict confinement.</p>
+
+  <h3>Main packaged components</h3>
+  <ul>
+    <li>IgH EtherCAT 1.6.9 userspace library and command-line tool</li>
+    <li>ICube ROS 2 EtherCAT driver</li>
+    <li>ROS 2 Lyrical and ROS 2 Control runtime</li>
+    <li>Controller manager and joint-state broadcaster</li>
+    <li>Complete EasyCAT process-data configuration</li>
+    <li>A ROS adapter that publishes both analog inputs on <code>/joint_states</code></li>
+    <li>A live terminal dashboard for the presentation</li>
+  </ul>
+
+  <h2>EasyCAT integration</h2>
+  <p>The complete 32-byte output and 32-byte input process images are configured.</p>
+  <table>
+    <thead><tr><th>Item</th><th>Configuration</th></tr></thead>
+    <tbody>
+      <tr><td>Vendor ID</td><td><code>0x0000079a</code></td></tr>
+      <tr><td>Product ID</td><td><code>0x00defede</code></td></tr>
+      <tr><td>RxPDO</td><td><code>0x1600</code>, object <code>0x0005</code>, 32 bytes</td></tr>
+      <tr><td>TxPDO</td><td><code>0x1a00</code>, object <code>0x0006</code>, 32 bytes</td></tr>
+      <tr><td>SyncManagers</td><td>SM0 output; SM1 input</td></tr>
+    </tbody>
+  </table>
+  <p>The first two input bytes become A0 and A1. The adapter publishes them as a standard <code>sensor_msgs/msg/JointState</code> message:</p>
+  <ol>
+    <li><code>easycat_analog_0</code></li>
+    <li><code>easycat_analog_1</code></li>
+  </ol>
+  <p>This allows PlotJuggler, Foxglove, and normal ROS 2 command-line tools to consume the data.</p>
+
+  <h2>Demo experience</h2>
+  <p>The complete demo starts with one command:</p>
+  <pre><code>snap run ethercat-ros2-bridge.demo</code></pre>
+  <p>It starts the EtherCAT bridge in the background and displays a clean dashboard containing numeric A0/A1 values and live bar graphs. At the same time, both values are published on <code>/joint_states</code>.</p>
+  <p>ROS launch output is kept out of the presentation terminal and written to:</p>
+  <pre><code>~/snap/ethercat-ros2-bridge/current/easycat-demo.log</code></pre>
+  <div class="callout"><strong>Presentation options:</strong> the basic demo needs only the terminal. The extended demo can show the terminal, PlotJuggler or Foxglove, and a webcam view of the board together in one screen recording.</div>
+
+  <h2>Compatibility and confinement work</h2>
+  <p>The ICube Jazzy driver required a small compatibility layer to build against ROS 2 Lyrical. The upstream revision remains pinned, while the Lyrical-specific CMake changes are stored as separate reviewable files.</p>
+  <p>Packaged ROS applications use Fast DDS over UDPv4. This avoids shared-memory permission errors under strict confinement while allowing a host visualization tool to discover <code>/joint_states</code>.</p>
+  <p>Device access is restricted to <code>/dev/EtherCAT[0-9]*</code> through a <code>custom-device</code> interface. Local installation works; Snap Store publication and automatic connection will require review because this is a super-privileged interface.</p>
+
+  <h2>Validation completed</h2>
+  <p>The snap was installed and exercised in a clean Ubuntu 26.04 virtual machine. Validation confirmed:</p>
+  <ul>
+    <li>Strict snap installation and interface connection</li>
+    <li>The pinned IgH 1.6.9 command-line runtime</li>
+    <li>ROS discovery of the EasyCAT package, ICube driver, and broadcaster</li>
+    <li>Successful parsing of the packaged launch description</li>
+    <li>Correct loading of the full 32+32-byte EasyCAT configuration</li>
+    <li>Successful startup of the one-command dashboard</li>
+    <li>End-to-end conversion from EasyCAT-style input to <code>/joint_states</code></li>
+  </ul>
+  <p>A synthetic message containing A0=42 and A1=211 produced these exact ROS values:</p>
+  <pre><code>name: [easycat_analog_0, easycat_analog_1]
+position: [42.0, 211.0]</code></pre>
+  <p>The earlier bare-metal hardware test also confirmed that the EasyCAT board works with IgH when the host receive timeout is set to 5000 microseconds.</p>
+
+  <h2>What remains</h2>
+  <ol>
+    <li>Reconnect and power the physical EasyCAT board.</li>
+    <li>Install the final snap on the host and connect its interfaces.</li>
+    <li>Confirm the bundled CLI sees <code>Generic 32+32 bytes rev 1</code>.</li>
+    <li>Run the demo and verify both potentiometers update the dashboard.</li>
+    <li>Verify the same values change on <code>/joint_states</code>.</li>
+    <li>Connect PlotJuggler or Foxglove and record the final presentation.</li>
+  </ol>
+  <p>The software packaging, EasyCAT configuration, terminal presentation, and ROS topic conversion are complete. The remaining work is the final physical-device rehearsal and recording.</p>
+
+  <footer>ROBENG-1886 engineering summary — July 20, 2026</footer>
+</main>
+</body>
+</html>
