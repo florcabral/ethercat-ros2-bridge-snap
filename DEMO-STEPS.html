@@ -48,13 +48,21 @@
 
   <div class="success"><strong>Expected result:</strong> one command displays A0/A1 from 0–255 while publishing <code>easycat_analog_0</code> and <code>easycat_analog_1</code> on <code>/joint_states</code>.</div>
 
+  <p>The snap reads the Arduino's A0 and A1 analog inputs. For an interactive demo, two external potentiometers provide those input signals.</p>
+
   <div class="steps">
     <section id="hardware">
       <h2>Prepare the hardware</h2>
       <ol>
         <li>Connect the EasyCAT EtherCAT port to the host's configured EtherCAT adapter.</li>
         <li>Connect and power the Arduino/EasyCAT board.</li>
-        <li>Confirm both potentiometers are connected to the firmware's analog inputs.</li>
+        <li>The standard EasyCAT shield has no built-in potentiometers. Connect two external linear potentiometers to the Arduino Uno:
+          <ul>
+            <li>potentiometer 1 center pin (wiper) to <code>A0</code>;</li>
+            <li>potentiometer 2 center pin (wiper) to <code>A1</code>;</li>
+            <li>one outer pin of each potentiometer to <code>5V</code> and the other to <code>GND</code>.</li>
+          </ul>
+        </li>
         <li>Wait a few seconds for the board and network adapter to initialize.</li>
       </ol>
     </section>

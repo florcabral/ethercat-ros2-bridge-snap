@@ -4,7 +4,7 @@ This is the short operational procedure for tomorrow's demo. It assumes the host
 
 ## What the demo shows
 
-The snap reads both EasyCAT potentiometers and presents the same data in two places:
+The snap reads the Arduino's A0 and A1 analog inputs and presents the same data in two places. For an interactive demo, two external potentiometers provide those input signals:
 
 - a live terminal dashboard showing A0 and A1 from 0 to 255;
 - the ROS 2 `/joint_states` topic, ready for PlotJuggler or Foxglove.
@@ -18,7 +18,10 @@ The published joint order is fixed:
 
 1. Connect the EasyCAT EtherCAT port to the host's configured EtherCAT network adapter.
 2. Connect and power the Arduino/EasyCAT board.
-3. Confirm that both potentiometers are connected to the analog inputs used by the firmware.
+3. The standard EasyCAT shield has no built-in potentiometers. Connect two external linear potentiometers to the Arduino Uno:
+    - potentiometer 1 center pin (wiper) to `A0`;
+    - potentiometer 2 center pin (wiper) to `A1`;
+    - one outer pin of each potentiometer to `5V` and the other to `GND`.
 4. Wait a few seconds for the board and network adapter to initialize.
 
 ## 2. Open the snap project directory
