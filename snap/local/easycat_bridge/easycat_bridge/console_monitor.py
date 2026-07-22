@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render EasyCAT analog joint states as a live terminal dashboard."""
+"""Render EtherCAT analog joint states as a live terminal dashboard."""
 
 import argparse
 import math
@@ -74,7 +74,7 @@ class EasycatConsoleMonitor(Node):
         if self._last_message_at is None:
             if time.monotonic() - self._started_at > 15.0:
                 return "NO DATA - CHECK DEVICE/LOG"
-            return "WAITING FOR EASYCAT DATA"
+            return "WAITING FOR ETHERCAT DATA"
         if time.monotonic() - self._last_message_at > 1.0:
             return "DATA STALE"
         return "LIVE"
@@ -83,7 +83,7 @@ class EasycatConsoleMonitor(Node):
         status = self._status()
         lines = [
             "╔════════════════════════════════════════════════════════════════╗",
-            "║                   EasyCAT ROS 2 demo                           ║",
+            "║                   EtherCAT ROS 2 Bridge                        ║",
             "╠════════════════════════════════════════════════════════════════╣",
             f"║ Status: {status:<55}║",
         ]
@@ -109,7 +109,7 @@ class EasycatConsoleMonitor(Node):
         elif time.monotonic() - self._last_plain_output_at >= 1.0:
             if self._values:
                 print(
-                    "EasyCAT LIVE | "
+                    "EtherCAT ROS 2 Bridge LIVE | "
                     + " | ".join(
                         f"{JOINT_LABELS[name]}={self._values[name]:.1f}"
                         for name in JOINT_LABELS
@@ -117,7 +117,10 @@ class EasycatConsoleMonitor(Node):
                     flush=True,
                 )
             else:
-                print("EasyCAT | waiting for /joint_states ...", flush=True)
+                print(
+                    "EtherCAT ROS 2 Bridge | waiting for /joint_states ...",
+                    flush=True,
+                )
             self._last_plain_output_at = time.monotonic()
 
 
@@ -157,7 +160,7 @@ def main(args=None) -> None:
     parser.add_argument(
         "--launch-bridge",
         action="store_true",
-        help="start the packaged EasyCAT ROS launch and capture its logs",
+        help="start the packaged EtherCAT ROS 2 bridge and capture its logs",
     )
     parsed_args, ros_args = parser.parse_known_args(args)
 

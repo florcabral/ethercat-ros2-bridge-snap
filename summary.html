@@ -34,21 +34,21 @@
 <main>
   <header>
     <h1>ROBENG-1886</h1>
-    <p>Ubuntu 26.04 EtherCAT userspace and ROS 2 bridge packaging for the EasyCAT demonstration.</p>
+    <p>Ubuntu 26.04 EtherCAT userspace and ROS 2 bridge packaging for the physical EtherCAT demonstration.</p>
   </header>
 
-  <div class="callout"><strong>Running the demo:</strong> use the standalone <a href="DEMO-STEPS.html">HTML runbook</a> or <a href="DEMO-STEPS.md">Markdown runbook</a>.</div>
+  <div class="callout"><strong>Running the demo:</strong> use the <a href="DEMO-STEPS.md">step-by-step runbook</a>.</div>
 
   <section class="facts">
     <div class="fact"><strong>Ubuntu 26.04</strong>Strict core26 snap</div>
-    <div class="fact"><strong>184 MB</strong>Installable amd64 artifact</div>
+    <div class="fact"><strong>183 MiB</strong>Installable amd64 artifact</div>
     <div class="fact"><strong>IgH 1.6.9</strong>Pinned userspace</div>
     <div class="fact"><strong>ROS 2 Lyrical</strong>Standard /joint_states output</div>
   </section>
 
   <h2>What we achieved</h2>
-  <p>We produced an installable Ubuntu 26.04 snap that packages the EtherCAT userspace and ROS 2 bridge needed for the EasyCAT demo. The snap uses the IgH kernel modules supplied by the host and accesses the host-created <code>/dev/EtherCAT*</code> device instead of attempting to ship kernel modules.</p>
-  <p>The final artifact is <code>ethercat-ros2-bridge_0.1_amd64.snap</code>. It was built on July 20, 2026 with strict confinement.</p>
+  <p>We produced an installable Ubuntu 26.04 snap that packages the EtherCAT userspace and ROS 2 bridge needed for the physical EtherCAT demo. The snap uses the IgH kernel modules supplied by the host and accesses the host-created <code>/dev/EtherCAT*</code> device instead of attempting to ship kernel modules.</p>
+  <p>The final artifact is <code>ethercat-ros2-bridge_0.1_amd64.snap</code> (192,126,976 bytes / 183 MiB), with SHA-256 <code>22e4a06788f9813c1ebebaf79757d0e8c790a69c1b52dd9f0105bae731b9a8e0</code>. It was built on July 20, 2026 with strict confinement.</p>
 
   <h3>Main packaged components</h3>
   <ul>
@@ -109,18 +109,22 @@
 position: [42.0, 211.0]</code></pre>
   <p>The earlier bare-metal hardware test also confirmed that the EasyCAT board works with IgH when the host receive timeout is set to 5000 microseconds.</p>
 
-  <h2>What remains</h2>
-  <ol>
-    <li>Reconnect and power the physical EasyCAT board.</li>
-    <li>Install the final snap on the host and connect its interfaces.</li>
-    <li>Confirm the bundled CLI sees <code>Generic 32+32 bytes rev 1</code>.</li>
-    <li>Run the demo and verify both potentiometers update the dashboard.</li>
-    <li>Verify the same values change on <code>/joint_states</code>.</li>
-    <li>Connect PlotJuggler or Foxglove and record the final presentation.</li>
-  </ol>
-  <p>The software packaging, EasyCAT configuration, terminal presentation, and ROS topic conversion are complete. The remaining work is the final physical-device rehearsal and recording.</p>
+  <h2>Physical validation completed</h2>
+  <p>The exact strict snap was then exercised with the physical board in an Ubuntu 26.04 VM using the distribution's external IgH kernel modules. Validation confirmed:</p>
+  <ul>
+    <li>The bundled CLI discovered <code>Generic 32+32 bytes rev 1</code></li>
+    <li>The slave entered OP</li>
+    <li>The 64-byte process domain reached WorkingCounter 3/3</li>
+    <li>The dashboard reached LIVE and both physical dials changed A0/A1</li>
+    <li><code>/joint_states</code> published both live analog channels</li>
+    <li>PlotJuggler received and plotted both channels over ROS 2 DDS</li>
+  </ul>
+  <p>The Arduino ran the extended validation firmware from the separate <code>canonical/ethercat-easycat-testing-repo</code> at commit <code>67e36f641bf90a472ac88ed1969bbfa6cc2792c6</code>.</p>
 
-  <footer>ROBENG-1886 engineering summary — July 20, 2026</footer>
+  <h2>Completion status</h2>
+  <p>The implementation and acceptance test are complete. All EtherCAT userspace requirements used by the ROS 2 bridge are supplied by the snap, while the kernel master and device node remain host responsibilities as required.</p>
+
+  <footer>ROBENG-1886 engineering summary — validation completed July 21, updated July 22, 2026</footer>
 </main>
 </body>
 </html>

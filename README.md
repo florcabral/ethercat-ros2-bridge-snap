@@ -1,7 +1,7 @@
 # EtherCAT ROS 2 bridge snap
 
 A strict Ubuntu 26.04 snap that packages IgH EtherCAT userspace, the ICube ROS
-2 EtherCAT driver, and a ready-to-run EasyCAT demonstration for ROS 2 Lyrical.
+2 EtherCAT driver, and a ready-to-run EtherCAT demonstration for ROS 2 Lyrical.
 
 Connect an EasyCAT board, install the snap, and run one command to:
 
@@ -23,7 +23,6 @@ EasyCAT board
 ## Quick links
 
 - [Step-by-step demo runbook](DEMO-STEPS.md)
-- [Printable HTML demo runbook](DEMO-STEPS.html)
 - [Engineering record](ENGINEERING-RECORD.md)
 - [Project summary](summary.md)
 - [HTML project summary](summary.html)
@@ -39,14 +38,10 @@ Completed:
 - strict `/dev/EtherCAT*` access through `custom-device`;
 - A0/A1 conversion to `sensor_msgs/msg/JointState`;
 - one-command terminal dashboard;
-- strict installation and runtime checks on a clean Ubuntu 26.04 VM; and
-- synthetic end-to-end ROS validation with A0=42 and A1=211.
-
-Remaining physical validation:
-
-- install the final artifact on the EtherCAT host;
-- confirm the confined CLI sees the EasyCAT slave; and
-- rotate both potentiometers while checking the dashboard and ROS plots.
+- strict installation and runtime checks on a clean Ubuntu 26.04 VM;
+- synthetic end-to-end ROS validation with A0=42 and A1=211; and
+- physical validation through the strict snap: slave discovery, OP state,
+  WorkingCounter 3/3, live A0/A1 values, `/joint_states`, and PlotJuggler.
 
 ## Packaged components
 
@@ -65,7 +60,7 @@ The host provides the `ec_master` kernel module, NIC driver, and
 
 ## Demo result
 
-The snap provides a one-command EasyCAT demo. It starts the EtherCAT ROS 2
+The snap provides a one-command EtherCAT demo. It starts the EtherCAT ROS 2
 Control bridge, maps the two analog inputs to ROS joint positions, publishes
 `/joint_states`, and displays a live terminal dashboard:
 
@@ -128,7 +123,7 @@ Expected amd64 artifact:
 ethercat-ros2-bridge_0.1_amd64.snap
 ```
 
-The validated artifact is approximately 184 MB.
+The validated artifact is 192,126,976 bytes (183 MiB).
 
 ## Install and connect the EtherCAT device
 
@@ -176,9 +171,9 @@ Connect and power the EasyCAT device, then run:
 snap run ethercat-ros2-bridge.demo
 ```
 
-Wait for the dashboard status to change from `WAITING FOR EASYCAT DATA` to
-`LIVE`. Rotate both potentiometers; `A0` and `A1` should change independently
-from 0 to 255. Stop the demo with Ctrl-C.
+Wait for the dashboard status to change from `WAITING FOR ETHERCAT DATA` to
+`LIVE`. Rotate the two dials on the top-mounted EasyCAT Test shield; `A0` and
+`A1` should change independently from 0 to 255. Stop the demo with Ctrl-C.
 
 ## ROS 2 topic and visualization
 
@@ -268,10 +263,17 @@ packaged.
 
 ## Validation evidence
 
-The current revision has been validated as follows:
+The tested artifact is `ethercat-ros2-bridge_0.1_amd64.snap` with SHA-256:
+
+```text
+22e4a06788f9813c1ebebaf79757d0e8c790a69c1b52dd9f0105bae731b9a8e0
+```
+
+Installation and synthetic ROS checks were completed in a clean Ubuntu 26.04
+LXD VM:
 
 - Snapcraft produced the amd64 artifact successfully.
-- The strict snap installed in a clean Ubuntu 26.04 LXD VM.
+- The strict snap installed successfully.
 - The ROS content and custom EtherCAT interfaces connected successfully.
 - The bundled CLI reported IgH 1.6.9.
 - ROS discovered `easycat_bridge`, `ethercat_driver`, and
@@ -289,8 +291,28 @@ position:
   - 211.0
 ```
 
-The clean VM has no physical `/dev/EtherCAT0`; final real-device testing is
-therefore listed as remaining work instead of being reported as complete.
+Physical validation was then completed on Ubuntu 26.04 with the EtherCAT NIC
+passed through to the test VM. Ubuntu supplied the `ec_master` and `ec_generic`
+kernel modules and `/dev/EtherCAT0`; the snap supplied the IgH CLI and library,
+ICube driver, ROS 2 integration, configuration, and applications. Validation
+confirmed:
+
+- the confined CLI discovered `Generic 32+32 bytes rev 1`;
+- the bridge moved the slave from PREOP to OP;
+- the 64-byte process domain reported WorkingCounter 3/3;
+- the terminal dashboard reached `LIVE` and both A0 and A1 responded to their
+  physical dials;
+- `/joint_states` published `easycat_analog_0` and `easycat_analog_1` with live
+  values; and
+- a host PlotJuggler instance received and plotted both values over ROS 2 DDS.
+
+The Arduino used the extended firmware from
+`canonical/ethercat-easycat-testing-repo` commit
+`67e36f641bf90a472ac88ed1969bbfa6cc2792c6`
+(`sketch_jul2b/TestEasyCAT.ino`). That separate repository already contains the
+required A0/A1 process-data extension; the firmware is not duplicated here.
+
+This completes the physical-device acceptance test for the userspace snap.
 
 ## Known limitations
 

@@ -1,10 +1,14 @@
-# EasyCAT demo — step-by-step runbook
+# EtherCAT ROS 2 Bridge — step-by-step runbook
 
-This is the short operational procedure for tomorrow's demo. It assumes the host is running Ubuntu 26.04 and the EasyCAT firmware already contains the validated 32-byte input and 32-byte output process image.
+This runbook reproduces the physical validation completed on July 21, 2026. It
+assumes the host is running Ubuntu 26.04 and the EasyCAT firmware already
+contains the validated 32-byte input and 32-byte output process image.
 
 ## What the demo shows
 
-The snap reads the Arduino's A0 and A1 analog inputs and presents the same data in two places. For an interactive demo, two external potentiometers provide those input signals:
+The snap reads the Arduino's A0 and A1 analog inputs and presents the same data
+in two places. On the supplied device, the two dials on the top-mounted EasyCAT
+Test shield are potentiometers already connected to those inputs:
 
 - a live terminal dashboard showing A0 and A1 from 0 to 255;
 - the ROS 2 `/joint_states` topic, ready for PlotJuggler or Foxglove.
@@ -16,12 +20,11 @@ The published joint order is fixed:
 
 ## 1. Prepare the hardware
 
-1. Connect the EasyCAT EtherCAT port to the host's configured EtherCAT network adapter.
+1. Connect the EasyCAT EtherCAT port to the host's configured EtherCAT network
+    adapter.
 2. Connect and power the Arduino/EasyCAT board.
-3. The standard EasyCAT shield has no built-in potentiometers. Connect two external linear potentiometers to the Arduino Uno:
-    - potentiometer 1 center pin (wiper) to `A0`;
-    - potentiometer 2 center pin (wiper) to `A1`;
-    - one outer pin of each potentiometer to `5V` and the other to `GND`.
+3. Confirm the EasyCAT Test shield is seated on top. Its two black dials are the
+    potentiometers used by the demo; no external parts or wiring are required.
 4. Wait a few seconds for the board and network adapter to initialize.
 
 ## 2. Open the snap project directory
@@ -38,7 +41,9 @@ Check that it exists:
 
 ## 3. Verify the host EtherCAT master
 
-The host must supply the IgH kernel modules and `/dev/EtherCAT0`. The EasyCAT setup also requires the previously validated IgH receive timeout of 5000 microseconds.
+The host must supply the IgH kernel modules and `/dev/EtherCAT0`. The EasyCAT
+setup also requires the previously validated IgH receive timeout of 5000
+microseconds.
 
 Check the device node:
 
@@ -52,7 +57,9 @@ Expected slave description:
 
     Generic 32+32 bytes rev 1
 
-Do not continue until the slave is visible. If it is missing, check board power, the EtherCAT cable, the selected network adapter, the IgH modules, and the 5000 µs timeout.
+Do not continue until the slave is visible. If it is missing, check board power,
+the EtherCAT cable, the selected network adapter, the IgH modules, and the
+5000 µs timeout.
 
 ## 4. Install the ROS 2 content snap
 
@@ -116,7 +123,7 @@ Start the complete bridge and terminal dashboard:
 
 Wait for the dashboard status to change from:
 
-    WAITING FOR EASYCAT DATA
+    WAITING FOR ETHERCAT DATA
 
 to:
 
@@ -172,7 +179,7 @@ Start screen recording, rotate each potentiometer separately, then rotate both. 
 
 ## Troubleshooting
 
-### Dashboard says `WAITING FOR EASYCAT DATA`
+### Dashboard says `WAITING FOR ETHERCAT DATA`
 
 Allow up to 15 seconds for ROS startup. If it does not become live, inspect the log:
 

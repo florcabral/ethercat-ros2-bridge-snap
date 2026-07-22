@@ -39,10 +39,10 @@ def generate_launch_description() -> LaunchDescription:
 """
 
     control_node = Node(
-      package="controller_manager",
-      executable="ros2_control_node",
-      parameters=[controller_config],
-      output="screen",
+        package="controller_manager",
+        executable="ros2_control_node",
+        parameters=[controller_config],
+        output="screen",
     )
 
     return LaunchDescription(
@@ -55,14 +55,14 @@ def generate_launch_description() -> LaunchDescription:
             ),
             control_node,
             RegisterEventHandler(
-              OnProcessExit(
-                target_action=control_node,
-                on_exit=[
-                  EmitEvent(
-                    event=Shutdown(reason="controller manager stopped")
-                  )
-                ],
-              )
+                OnProcessExit(
+                    target_action=control_node,
+                    on_exit=[
+                        EmitEvent(
+                            event=Shutdown(reason="controller manager stopped")
+                        )
+                    ],
+                )
             ),
             Node(
                 package="controller_manager",
@@ -73,6 +73,8 @@ def generate_launch_description() -> LaunchDescription:
                     "/controller_manager",
                     "--controller-manager-timeout",
                     "30",
+                    "--param-file",
+                    controller_config,
                 ],
                 output="screen",
             ),

@@ -12,6 +12,7 @@ easycat_state_broadcaster:
     interfaces:
       - analog_input_0
       - analog_input_1
+    publish_dynamic_joint_states: true
     # Keep the broadcaster's standard output local because its custom GPIO
     # interfaces do not map one-to-one onto two JointState entries. The adapter
     # consumes its dynamic output and publishes the public /joint_states topic.

@@ -5,16 +5,16 @@
 The complete installation and presentation procedure is available in:
 
 - [DEMO-STEPS.md](DEMO-STEPS.md)
-- [DEMO-STEPS.html](DEMO-STEPS.html)
 
 ## What we achieved
 
-We produced an installable Ubuntu 26.04 snap that packages the EtherCAT userspace and ROS 2 bridge needed for the EasyCAT demo. The snap uses the IgH kernel modules provided by the host and accesses the host-created `/dev/EtherCAT*` device rather than attempting to ship kernel modules itself.
+We produced an installable Ubuntu 26.04 snap that packages the EtherCAT userspace and ROS 2 bridge needed for the physical EtherCAT demo. The snap uses the IgH kernel modules provided by the host and accesses the host-created `/dev/EtherCAT*` device rather than attempting to ship kernel modules itself.
 
 The final artifact is:
 
 - `ethercat-ros2-bridge_0.1_amd64.snap`
-- 184 MB
+- 192,126,976 bytes (183 MiB)
+- SHA-256 `22e4a06788f9813c1ebebaf79757d0e8c790a69c1b52dd9f0105bae731b9a8e0`
 - strict confinement
 - built on July 20, 2026
 
@@ -92,16 +92,23 @@ For the data-path test, a synthetic EasyCAT message containing A0=42 and A1=211 
 
 The original bare-metal hardware test also established that the EasyCAT board works with IgH when the host receive timeout is set to 5000 microseconds.
 
-## What remains
+The exact strict snap was then exercised with the physical board in an Ubuntu
+26.04 VM using the distribution's external IgH kernel modules. The confined
+userspace stack:
 
-Only the final test with the physical board is outstanding:
+- discovered `Generic 32+32 bytes rev 1` with the bundled CLI;
+- moved the slave to OP;
+- completed the 64-byte process domain with WorkingCounter 3/3;
+- displayed live A0/A1 values from both physical dials;
+- published both values on `/joint_states`; and
+- supplied both live curves to PlotJuggler over ROS 2 DDS.
 
-1. Reconnect and power the EasyCAT board.
-2. Install the final snap on the host and connect its interfaces.
-3. Confirm the bundled CLI sees `Generic 32+32 bytes rev 1`.
-4. Run the demo command.
-5. Rotate both potentiometers and confirm the dashboard changes.
-6. Confirm the same values change on `/joint_states` in PlotJuggler or Foxglove.
-7. Record the final combined terminal, plot, and webcam demonstration.
+The Arduino ran the extended validation firmware from the separate
+`canonical/ethercat-easycat-testing-repo` at commit
+`67e36f641bf90a472ac88ed1969bbfa6cc2792c6`.
 
-The software packaging, EasyCAT configuration, terminal presentation, and ROS topic conversion are complete. The remaining work is physical-device validation and recording the demo.
+## Completion status
+
+The implementation and acceptance test are complete. All EtherCAT userspace
+requirements used by the ROS 2 bridge are supplied by the snap, while the
+kernel master and device node remain host responsibilities as required.

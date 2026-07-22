@@ -201,7 +201,7 @@ Snapcraft while producing one coherent ROS overlay.
 ### 13. Built and inspected the installable artifact
 
 Snapcraft produced `ethercat-ros2-bridge_0.1_amd64.snap` on July 20, 2026. The
-artifact is 184 MB and contains:
+artifact is 192,126,976 bytes (183 MiB) and contains:
 
 - IgH 1.6.9 userspace CLI, headers, and `libethercat.so.1`
 - all pinned ICube driver libraries and plugin metadata
@@ -234,6 +234,46 @@ were connected. Validation confirmed:
 The VM intentionally has no `/dev/EtherCAT0`, so failure to activate the master
 there is expected and separate from the final physical-device validation.
 
+### 15. Completed physical-device validation
+
+The same strict snap artifact was validated with the physical EasyCAT slave on
+July 21, 2026. The test used an Ubuntu 26.04 libvirt VM with the ASIX EtherCAT
+NIC passed through. Ubuntu supplied the `ec_master` and `ec_generic` kernel
+modules and created `/dev/EtherCAT0`; no kernel component came from the snap.
+
+The Arduino ran the extended validation firmware from
+`canonical/ethercat-easycat-testing-repo` commit
+`67e36f641bf90a472ac88ed1969bbfa6cc2792c6`
+(`sketch_jul2b/TestEasyCAT.ino`). That firmware publishes A0 and A1 in the first
+two bytes of the 32-byte TxPDO and supplies the additional deterministic test
+signals used during hardware bring-up. The firmware source remains in the
+separate testing repository and was already committed before this snap work.
+
+The tested artifact was:
+
+- file: `ethercat-ros2-bridge_0.1_amd64.snap`
+- size: 192,126,976 bytes (approximately 192 MB / 183 MiB)
+- SHA-256: `22e4a06788f9813c1ebebaf79757d0e8c790a69c1b52dd9f0105bae731b9a8e0`
+
+The ROS content and EtherCAT `custom-device` interfaces were connected before
+testing. The physical test confirmed:
+
+- the bundled CLI discovered `Generic 32+32 bytes rev 1`
+- the slave entered OP while the packaged bridge was active
+- the 64-byte EtherCAT domain reported WorkingCounter 3/3
+- `snap run ethercat-ros2-bridge.demo` reached `LIVE`
+- both physical dials independently changed the dashboard's A0 and A1 values
+- `/joint_states` published `easycat_analog_0` and `easycat_analog_1` with the
+  live physical values
+- PlotJuggler on the host discovered `/joint_states` over ROS 2 DDS and plotted
+  both channels
+
+Artifact inspection also confirmed that the tested snap contains the final
+controller parameters and passes the controller YAML to the ROS 2 Control
+spawner. The committed functional configuration therefore matches the runtime
+behavior exercised by the physical test; subsequent source changes only polish
+user-visible naming and documentation.
+
 ## Host-side prerequisite established
 
 Ubuntu supplies the version-compatible IgH kernel modules. The host must load
@@ -247,30 +287,20 @@ change to the userspace bundled by this snap.
 
 ## Current status
 
-- The 184 MB installable snap builds successfully.
+- The 183 MiB installable snap builds successfully.
 - IgH userspace, the ICube driver, and all required ROS components are packaged.
 - Strict installation, interface connection, CLI execution, package discovery,
   and launch parsing are validated on Ubuntu 26.04.
 - The EasyCAT 32+32-byte PDO and SM0/SM1 configuration is packaged.
 - The one-command terminal demo and `/joint_states` conversion are packaged.
 - The ROS conversion path is validated with synthetic A0/A1 data.
-- Final live validation requires reconnecting the physical EasyCAT device.
+- The physical slave, complete process domain, live dashboard, `/joint_states`,
+  and PlotJuggler path are validated through the strict snap.
 
-## Remaining engineering steps
+## Acceptance result
 
-1. Install the final artifact on the physical Ubuntu 26.04 host and connect its
-  ROS content and EtherCAT custom-device interfaces.
-2. Run the bundled CLI against the host `/dev/EtherCAT0` and confirm slave
-  discovery.
-3. Run `snap run ethercat-ros2-bridge.demo` with the EasyCAT connected.
-4. Confirm that changing both potentiometers updates the dashboard and live
-  `/joint_states` values.
-5. Connect PlotJuggler or Foxglove to `/joint_states` and record the final demo.
-
-## Remaining validation evidence to add
-
-When available, record:
-
-- Bundled CLI slave-discovery result.
-- Controller-manager and joint-state-broadcaster status.
-- A sample `/joint_states` message produced from live EasyCAT input.
+ROBENG-1886's engineering objective is complete: all required EtherCAT
+userspace components are packaged in the snap, the Ubuntu 26.04 kernel modules
+remain external, and the resulting snap has been exercised end to end with the
+physical EtherCAT device. Store review for automatic `custom-device` connection
+is a publication step, not an outstanding functional validation item.
