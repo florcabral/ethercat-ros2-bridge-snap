@@ -1,8 +1,9 @@
-# Project Specs
+# Reproducibility Guide
 
-This document records the main engineering work used to package the EtherCAT
-userspace and ROS 2 bridge. It intentionally excludes the detailed debugging
-history. Update it as the build, installation, and hardware validation progress.
+This guide records the pinned sources, packaging steps, installation
+prerequisites, and validation needed to reproduce the EtherCAT userspace and
+ROS 2 bridge snap. It intentionally excludes the detailed debugging history.
+Update it as the build, installation, and hardware validation progress.
 
 ## Objective
 
