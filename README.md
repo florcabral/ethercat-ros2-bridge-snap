@@ -23,9 +23,8 @@ EasyCAT board
 ## Quick links
 
 - [Step-by-step demo runbook](DEMO-STEPS.md)
-- [Engineering record](ENGINEERING-RECORD.md)
+- [Project specs](ENGINEERING-RECORD.md)
 - [Project summary](summary.md)
-- [HTML project summary](summary.html)
 
 ## Project status
 

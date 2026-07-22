@@ -1,4 +1,4 @@
-# ROBENG-1886 engineering record
+# Project Specs
 
 This document records the main engineering work used to package the EtherCAT
 userspace and ROS 2 bridge. It intentionally excludes the detailed debugging
