@@ -46,6 +46,50 @@ The first two input bytes are exposed as A0 and A1. They are converted into a st
 
 This gives PlotJuggler, Foxglove, and normal ROS 2 command-line tools a standard topic to consume.
 
+## Arduino CoE/SDO memory analysis
+
+The separate rev-2 CoE/SDO implementation was compiled for the Arduino Uno's
+ATmega328P with `arduino-cli`; it was not flashed to the physical Arduino. The
+final 32-byte input and 32-byte output build fits comfortably within the
+board's flash and SRAM limits:
+
+| Resource | Available | Used | Remaining |
+|---|---:|---:|---:|
+| Program flash | 32,256 bytes | 8,834 bytes (27.4%) | 23,422 bytes |
+| SRAM | 2,048 bytes | 627 bytes (30.6%) static | 1,421 bytes for stack |
+| Arduino EEPROM | 1,024 bytes | 0 bytes | 1,024 bytes |
+
+The linked ELF accounts for the static SRAM as follows:
+
+- 416 bytes for the complete EasyCAT object;
+- 157 bytes for Arduino serial buffering and state; and
+- 54 bytes for the remaining application and Arduino core globals.
+
+The EasyCAT allocation includes both 32-byte PDO buffers, one reusable
+128-byte mailbox buffer, the built-in dictionary, and all four preallocated
+application SDO slots. The implementation does not use `malloc`, `new`,
+Arduino `String`, or another dynamic allocation mechanism. SDO names are held
+in flash, and no mailbox-sized temporary buffer is placed on the stack.
+
+An analysis-only build with link-time optimization disabled was used to obtain
+compiler stack-usage records. The largest relevant function frame was 24
+bytes, `ProcessMailbox()` used 14 bytes, SDO request processing used 15 bytes,
+and the largest enabled interrupt frame used 17 bytes. The estimated deepest
+mailbox call chain with one interrupt is approximately 100 to 120 bytes. Even
+reserving a deliberately conservative 512 bytes for the stack leaves about
+909 bytes of unused SRAM.
+
+A maximum-buffer stress build with 128-byte input and output PDOs also fit on
+the Uno. It used 8,766 bytes of flash and 819 bytes of static SRAM, leaving
+1,229 bytes for the stack. The deployed rev-2 profile remains 32+32 bytes, so
+its margin is larger.
+
+The generated 4,096-byte SII image is stored in the LAN9252's external EEPROM.
+It consumes no Arduino flash, SRAM, or EEPROM. These results establish the
+static memory and stack budget; the rev-2 CoE/SDO firmware still requires the
+documented hardware validation. The physical snap demonstration described in
+this summary used the hardware-validated rev-1 PDO-only profile.
+
 ## Demo experience
 
 After installing and connecting the snap interfaces, the complete demo starts with one command:
@@ -103,7 +147,7 @@ userspace stack:
 - published both values on `/joint_states`; and
 - supplied both live curves to PlotJuggler over ROS 2 DDS.
 
-The Arduino ran the extended validation firmware from the separate
+The Arduino ran the rev-1 extended validation firmware from the separate
 `canonical/ethercat-easycat-testing-repo` at commit
 `67e36f641bf90a472ac88ed1969bbfa6cc2792c6`.
 
